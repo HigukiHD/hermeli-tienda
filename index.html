@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HERMELI — Indumentaria Femenina</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Inter:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #fafaf8;
+      --surface: #ffffff;
+      --primary: #1a1a1a;
+      --accent: #b8955a;
+      --accent-light: #f5efe6;
+      --muted: #888;
+      --border: #e8e4df;
+      --radius: 4px;
+    }
+
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--primary); }
+
+    /* ── HEADER ── */
+    header {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 0 24px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 26px; font-weight: 600; letter-spacing: 4px; text-transform: uppercase;
+      color: var(--primary); text-decoration: none;
+    }
+    .header-actions { display: flex; align-items: center; gap: 20px; }
+    .icon-btn {
+      background: none; border: none; cursor: pointer; position: relative;
+      color: var(--primary); padding: 6px;
+    }
+    .icon-btn svg { display: block; }
+    .cart-badge {
+      position: absolute; top: 0; right: 0;
+      background: var(--accent); color: #fff;
+      font-size: 10px; font-weight: 600;
+      width: 17px; height: 17px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; transform: scale(0); transition: .2s;
+    }
+    .cart-badge.visible { opacity: 1; transform: scale(1); }
+
+    /* ── HERO ── */
+    .hero {
+      background: var(--primary); color: #fff;
+      text-align: center; padding: 72px 24px;
+    }
+    .hero h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(36px, 8vw, 72px); font-weight: 300; letter-spacing: 8px;
+      margin-bottom: 12px;
+    }
+    .hero p { font-size: 14px; letter-spacing: 3px; text-transform: uppercase; color: #ccc; }
+
+    /* ── FILTERS ── */
+    .filter-bar {
+      padding: 20px 24px; border-bottom: 1px solid var(--border);
+      display: flex; gap: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .filter-btn {
+      white-space: nowrap; padding: 8px 18px;
+      border: 1px solid var(--border); background: var(--surface);
+      border-radius: 20px; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif;
+      transition: .2s; color: var(--primary);
+    }
+    .filter-btn.active, .filter-btn:hover {
+      background: var(--primary); color: #fff; border-color: var(--primary);
+    }
+
+    /* ── GRID ── */
+    .grid-section { padding: 32px 24px; }
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 24px;
+    }
+    .product-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden;
+      cursor: pointer; transition: box-shadow .2s, transform .2s;
+    }
+    .product-card:hover { box-shadow: 0 8px 32px rgba(0,0,0,.1); transform: translateY(-2px); }
+    .product-img {
+      width: 100%; aspect-ratio: 3/4; object-fit: cover;
+      background: var(--accent-light);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .product-img img { width: 100%; height: 100%; object-fit: cover; }
+    .product-img .placeholder-icon { color: #ccc; font-size: 40px; }
+    .product-info { padding: 14px; }
+    .product-category { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+    .product-name { font-size: 15px; font-weight: 500; margin-bottom: 8px; }
+    .product-price { font-size: 16px; font-weight: 600; color: var(--accent); }
+    .add-btn {
+      width: 100%; margin-top: 12px; padding: 10px;
+      background: var(--primary); color: #fff; border: none;
+      font-family: 'Inter', sans-serif; font-size: 13px; letter-spacing: 1px;
+      cursor: pointer; border-radius: var(--radius); transition: background .2s;
+    }
+    .add-btn:hover { background: #333; }
+
+    /* ── EMPTY STATE ── */
+    .empty-state { text-align: center; padding: 80px 24px; color: var(--muted); }
+    .empty-state h3 { font-size: 18px; margin-bottom: 8px; }
+
+    /* ── LOADING ── */
+    .loading { text-align: center; padding: 60px; color: var(--muted); }
+    .spinner {
+      width: 32px; height: 32px; border: 2px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin .8s linear infinite; margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── CART SIDEBAR ── */
+    .cart-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.4);
+      z-index: 200; opacity: 0; pointer-events: none; transition: opacity .3s;
+    }
+    .cart-overlay.open { opacity: 1; pointer-events: all; }
+    .cart-panel {
+      position: fixed; top: 0; right: 0; height: 100%; width: 380px; max-width: 100vw;
+      background: var(--surface); z-index: 201;
+      transform: translateX(100%); transition: transform .3s; display: flex; flex-direction: column;
+    }
+    .cart-panel.open { transform: translateX(0); }
+    .cart-header {
+      padding: 20px 24px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .cart-header h2 { font-family: 'Cormorant Garamond', serif; font-size: 22px; letter-spacing: 2px; }
+    .close-btn { background: none; border: none; cursor: pointer; font-size: 22px; color: var(--muted); }
+    .cart-items { flex: 1; overflow-y: auto; padding: 16px 24px; }
+    .cart-item {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 14px 0; border-bottom: 1px solid var(--border);
+    }
+    .cart-item-img {
+      width: 70px; height: 90px; object-fit: cover;
+      background: var(--accent-light); border-radius: var(--radius); flex-shrink: 0;
+    }
+    .cart-item-img img { width: 100%; height: 100%; object-fit: cover; border-radius: var(--radius); }
+    .cart-item-info { flex: 1; }
+    .cart-item-name { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
+    .cart-item-meta { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+    .cart-item-price { font-size: 14px; font-weight: 600; color: var(--accent); }
+    .qty-control { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+    .qty-btn {
+      width: 26px; height: 26px; border: 1px solid var(--border);
+      background: none; cursor: pointer; border-radius: 50%; font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .qty-num { font-size: 14px; min-width: 20px; text-align: center; }
+    .remove-item-btn { background: none; border: none; cursor: pointer; color: #ccc; font-size: 14px; padding: 4px; }
+    .cart-footer { padding: 20px 24px; border-top: 1px solid var(--border); }
+    .cart-total { display: flex; justify-content: space-between; margin-bottom: 16px; font-size: 16px; font-weight: 600; }
+    .whatsapp-btn {
+      width: 100%; padding: 14px; border: none; border-radius: var(--radius);
+      background: #25D366; color: #fff; font-size: 15px; font-weight: 500;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px;
+      font-family: 'Inter', sans-serif; letter-spacing: .5px; transition: background .2s;
+    }
+    .whatsapp-btn:hover { background: #1ebe5b; }
+    .cart-empty-msg { text-align: center; padding: 40px 0; color: var(--muted); font-size: 14px; }
+
+    /* ── PRODUCT MODAL ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.5);
+      z-index: 300; display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity .3s; padding: 16px;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface); border-radius: 8px; overflow: hidden;
+      max-width: 760px; width: 100%; max-height: 90vh;
+      display: flex; transform: scale(.95); transition: transform .3s;
+    }
+    .modal-overlay.open .modal { transform: scale(1); }
+    .modal-img {
+      width: 45%; background: var(--accent-light);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-img img { width: 100%; height: 100%; object-fit: cover; }
+    .modal-content { flex: 1; padding: 32px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+    .modal-category { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); }
+    .modal-name { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 400; }
+    .modal-price { font-size: 22px; font-weight: 600; color: var(--accent); }
+    .modal-desc { font-size: 14px; line-height: 1.7; color: #555; }
+    .sizes-label { font-size: 13px; font-weight: 500; }
+    .sizes-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .size-chip {
+      padding: 7px 14px; border: 1px solid var(--border);
+      border-radius: var(--radius); font-size: 13px; cursor: pointer;
+    }
+    .size-chip.selected { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .modal-add-btn {
+      padding: 14px; background: var(--primary); color: #fff; border: none;
+      border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 14px;
+      letter-spacing: 1px; cursor: pointer; transition: background .2s; margin-top: auto;
+    }
+    .modal-add-btn:hover { background: #333; }
+    .modal-close {
+      position: absolute; top: 12px; right: 16px;
+      background: none; border: none; font-size: 24px; cursor: pointer; color: var(--muted);
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: var(--primary); color: #fff;
+      padding: 12px 24px; border-radius: 24px; font-size: 14px;
+      z-index: 999; transition: transform .3s; white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--primary); color: #aaa;
+      text-align: center; padding: 40px 24px;
+      font-size: 13px; letter-spacing: 1px;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+    footer .footer-logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 28px; color: #fff; letter-spacing: 5px; margin-bottom: 16px; display: block;
+    }
+
+    @media (max-width: 600px) {
+      .modal { flex-direction: column; }
+      .modal-img { width: 100%; height: 240px; }
+      header { padding: 0 16px; }
+      .grid-section { padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <a class="logo" href="#">HERMELI</a>
+  <div class="header-actions">
+    <a href="https://www.instagram.com/hermeli.py/" target="_blank" title="Instagram" style="color:var(--primary); display:flex;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".8" fill="currentColor" stroke="none"/></svg>
+    </a>
+    <button class="icon-btn" id="cartBtn" title="Carrito">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <span class="cart-badge" id="cartBadge">0</span>
+    </button>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <h1>HERMELI</h1>
+  <p>Indumentaria Femenina · Envíos a todo el país</p>
+</section>
+
+<!-- FILTERS -->
+<div class="filter-bar" id="filterBar">
+  <button class="filter-btn active" data-cat="all">Todos</button>
+</div>
+
+<!-- GRID -->
+<section class="grid-section">
+  <div id="productsContainer">
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Cargando productos...</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span class="footer-logo">HERMELI</span>
+  Indumentaria Femenina &nbsp;·&nbsp;
+  <a href="https://www.instagram.com/hermeli.py/" target="_blank">@hermeli.py</a>
+  &nbsp;·&nbsp; Envíos a todo Paraguay<br/><br/>
+  📞 0982 073 757 &nbsp;/&nbsp; 0985 281 991
+</footer>
+
+<!-- CART OVERLAY + PANEL -->
+<div class="cart-overlay" id="cartOverlay"></div>
+<div class="cart-panel" id="cartPanel">
+  <div class="cart-header">
+    <h2>MI CARRITO</h2>
+    <button class="close-btn" id="closeCart">✕</button>
+  </div>
+  <div class="cart-items" id="cartItems">
+    <p class="cart-empty-msg">Tu carrito está vacío</p>
+  </div>
+  <div class="cart-footer" id="cartFooter" style="display:none;">
+    <div class="cart-total"><span>Total</span><span id="cartTotal">₲ 0</span></div>
+    <button class="whatsapp-btn" id="whatsappBtn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+      Pedir por WhatsApp
+    </button>
+  </div>
+</div>
+
+<!-- PRODUCT MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="productModal">
+    <div class="modal-img" id="modalImg"></div>
+    <div class="modal-content">
+      <p class="modal-category" id="modalCat"></p>
+      <h2 class="modal-name" id="modalName"></h2>
+      <p class="modal-price" id="modalPrice"></p>
+      <p class="modal-desc" id="modalDesc"></p>
+      <div id="sizesSection" style="display:none;">
+        <p class="sizes-label">Talla</p>
+        <div class="sizes-grid" id="sizesGrid"></div>
+      </div>
+      <button class="modal-add-btn" id="modalAddBtn">Agregar al carrito</button>
+    </div>
+    <button class="modal-close" id="modalClose">✕</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- FIREBASE SDK -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getFirestore, collection, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+  // ──────────────────────────────────────────
+  // 🔧 PEGA AQUÍ TU CONFIGURACIÓN DE FIREBASE
+  // (la conseguís en: Firebase Console → Proyecto → Configuración → Tu aplicación web)
+  const firebaseConfig = {
+    apiKey: "AIzaSyC3BaoXOQi7ub73nfdH2hDx6uqBnCi8PP8",
+    authDomain: "hermeli.firebaseapp.com",
+    projectId: "hermeli",
+    storageBucket: "hermeli.firebasestorage.app",
+    messagingSenderId: "1070236393050",
+    appId: "1:1070236393050:web:69dad221f9ff6d60270263",
+    measurementId: "G-KC6TSEN24D"
+  };
+  // ──────────────────────────────────────────
+
+  const WHATSAPP = "595982073757"; // número sin + ni espacios
+
+  let app, db;
+  let allProducts = [];
+  let cart = JSON.parse(localStorage.getItem('hermeli_cart') || '[]');
+  let currentProduct = null;
+  let selectedSize = null;
+  let activeCategory = 'all';
+
+  // Try Firebase, fallback to demo products
+  try {
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    const q = collection(db, 'productos');
+    onSnapshot(q, (snap) => {
+      allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      renderProducts();
+      renderFilters();
+    });
+  } catch(e) {
+    // Demo products cuando Firebase no está configurado
+    allProducts = [
+      { id:'1', name:'Blusa Floral', price:85000, category:'Blusas', description:'Blusa liviana con estampado floral, perfecta para el verano.', sizes:['XS','S','M','L'], image:'' },
+      { id:'2', name:'Jean Skinny', price:150000, category:'Pantalones', description:'Jean de corte skinny, cómodo y con excelente caída.', sizes:['36','38','40','42'], image:'' },
+      { id:'3', name:'Vestido Midi', price:120000, category:'Vestidos', description:'Vestido midi elegante, ideal para ocasiones especiales.', sizes:['S','M','L'], image:'' },
+      { id:'4', name:'Cardigan Suave', price:95000, category:'Abrigos', description:'Cardigan de tela suave y abrigada, perfecto para los días frescos.', sizes:['S','M','L','XL'], image:'' },
+    ];
+    renderProducts();
+    renderFilters();
+  }
+
+  // ── RENDER PRODUCTS ──
+  function renderProducts() {
+    const container = document.getElementById('productsContainer');
+    const filtered = activeCategory === 'all' ? allProducts : allProducts.filter(p => p.category === activeCategory);
+    if (!filtered.length) {
+      container.innerHTML = `<div class="empty-state"><h3>No hay productos en esta categoría</h3><p>Volvé pronto, estamos sumando novedades.</p></div>`;
+      return;
+    }
+    container.innerHTML = `<div class="products-grid">${filtered.map(productCard).join('')}</div>`;
+    container.querySelectorAll('.product-card').forEach(card => {
+      card.addEventListener('click', () => openModal(card.dataset.id));
+    });
+    container.querySelectorAll('.add-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const p = allProducts.find(x => x.id === btn.dataset.id);
+        if (p) addToCart(p, null);
+      });
+    });
+  }
+
+  function productCard(p) {
+    const img = p.image
+      ? `<img src="${p.image}" alt="${p.name}" loading="lazy" />`
+      : `<div class="placeholder-icon">👗</div>`;
+    return `
+      <div class="product-card" data-id="${p.id}">
+        <div class="product-img">${img}</div>
+        <div class="product-info">
+          <p class="product-category">${p.category || ''}</p>
+          <p class="product-name">${p.name}</p>
+          <p class="product-price">₲ ${Number(p.price).toLocaleString('es-PY')}</p>
+          <button class="add-btn" data-id="${p.id}">+ Agregar</button>
+        </div>
+      </div>`;
+  }
+
+  // ── FILTERS ──
+  function renderFilters() {
+    const bar = document.getElementById('filterBar');
+    const cats = ['all', ...new Set(allProducts.map(p => p.category).filter(Boolean))];
+    bar.innerHTML = cats.map(c =>
+      `<button class="filter-btn ${c === activeCategory ? 'active' : ''}" data-cat="${c}">${c === 'all' ? 'Todos' : c}</button>`
+    ).join('');
+    bar.querySelectorAll('.filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeCategory = btn.dataset.cat;
+        bar.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderProducts();
+      });
+    });
+  }
+
+  // ── MODAL ──
+  function openModal(id) {
+    const p = allProducts.find(x => x.id === id);
+    if (!p) return;
+    currentProduct = p;
+    selectedSize = null;
+    document.getElementById('modalCat').textContent = p.category || '';
+    document.getElementById('modalName').textContent = p.name;
+    document.getElementById('modalPrice').textContent = `₲ ${Number(p.price).toLocaleString('es-PY')}`;
+    document.getElementById('modalDesc').textContent = p.description || '';
+    const imgEl = document.getElementById('modalImg');
+    imgEl.innerHTML = p.image ? `<img src="${p.image}" alt="${p.name}" />` : `<div style="font-size:60px;">👗</div>`;
+    const sizesSection = document.getElementById('sizesSection');
+    if (p.sizes && p.sizes.length) {
+      sizesSection.style.display = 'block';
+      document.getElementById('sizesGrid').innerHTML = p.sizes.map(s =>
+        `<div class="size-chip" data-size="${s}">${s}</div>`
+      ).join('');
+      document.querySelectorAll('.size-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          document.querySelectorAll('.size-chip').forEach(c => c.classList.remove('selected'));
+          chip.classList.add('selected');
+          selectedSize = chip.dataset.size;
+        });
+      });
+    } else {
+      sizesSection.style.display = 'none';
+    }
+    document.getElementById('modalOverlay').classList.add('open');
+  }
+
+  document.getElementById('modalOverlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('modalOverlay') || e.target === document.getElementById('modalClose'))
+      document.getElementById('modalOverlay').classList.remove('open');
+  });
+  document.getElementById('modalClose').addEventListener('click', () =>
+    document.getElementById('modalOverlay').classList.remove('open'));
+
+  document.getElementById('modalAddBtn').addEventListener('click', () => {
+    if (!currentProduct) return;
+    if (currentProduct.sizes?.length && !selectedSize) { showToast('Por favor seleccioná una talla'); return; }
+    addToCart(currentProduct, selectedSize);
+    document.getElementById('modalOverlay').classList.remove('open');
+  });
+
+  // ── CART ──
+  function addToCart(product, size) {
+    const key = product.id + (size ? '_' + size : '');
+    const existing = cart.find(i => i.key === key);
+    if (existing) existing.qty++;
+    else cart.push({ key, id: product.id, name: product.name, price: product.price, image: product.image, size, qty: 1 });
+    saveCart();
+    renderCart();
+    openCart();
+    showToast(`${product.name} agregado al carrito`);
+  }
+
+  function saveCart() {
+    localStorage.setItem('hermeli_cart', JSON.stringify(cart));
+  }
+
+  function renderCart() {
+    const itemsEl = document.getElementById('cartItems');
+    const footerEl = document.getElementById('cartFooter');
+    const badge = document.getElementById('cartBadge');
+    const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    const count = cart.reduce((s, i) => s + i.qty, 0);
+    badge.textContent = count;
+    badge.classList.toggle('visible', count > 0);
+    if (!cart.length) {
+      itemsEl.innerHTML = `<p class="cart-empty-msg">Tu carrito está vacío</p>`;
+      footerEl.style.display = 'none';
+      return;
+    }
+    footerEl.style.display = 'block';
+    document.getElementById('cartTotal').textContent = `₲ ${total.toLocaleString('es-PY')}`;
+    itemsEl.innerHTML = cart.map(item => {
+      const imgHtml = item.image ? `<img src="${item.image}" alt="${item.name}" />` : `<div style="display:flex;align-items:center;justify-content:center;font-size:28px;height:100%;">👗</div>`;
+      return `
+        <div class="cart-item" data-key="${item.key}">
+          <div class="cart-item-img">${imgHtml}</div>
+          <div class="cart-item-info">
+            <p class="cart-item-name">${item.name}</p>
+            <p class="cart-item-meta">${item.size ? 'Talla: ' + item.size : 'Talla única'}</p>
+            <p class="cart-item-price">₲ ${Number(item.price).toLocaleString('es-PY')}</p>
+            <div class="qty-control">
+              <button class="qty-btn" data-action="dec" data-key="${item.key}">−</button>
+              <span class="qty-num">${item.qty}</span>
+              <button class="qty-btn" data-action="inc" data-key="${item.key}">+</button>
+            </div>
+          </div>
+          <button class="remove-item-btn" data-key="${item.key}" title="Eliminar">✕</button>
+        </div>`;
+    }).join('');
+    itemsEl.querySelectorAll('.qty-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = cart.find(i => i.key === btn.dataset.key);
+        if (!item) return;
+        if (btn.dataset.action === 'inc') item.qty++;
+        else if (item.qty > 1) item.qty--;
+        else { cart = cart.filter(i => i.key !== btn.dataset.key); }
+        saveCart(); renderCart();
+      });
+    });
+    itemsEl.querySelectorAll('.remove-item-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        cart = cart.filter(i => i.key !== btn.dataset.key);
+        saveCart(); renderCart();
+      });
+    });
+  }
+
+  function openCart() {
+    document.getElementById('cartOverlay').classList.add('open');
+    document.getElementById('cartPanel').classList.add('open');
+    renderCart();
+  }
+  function closeCart() {
+    document.getElementById('cartOverlay').classList.remove('open');
+    document.getElementById('cartPanel').classList.remove('open');
+  }
+  document.getElementById('cartBtn').addEventListener('click', openCart);
+  document.getElementById('closeCart').addEventListener('click', closeCart);
+  document.getElementById('cartOverlay').addEventListener('click', closeCart);
+
+  // ── WHATSAPP CHECKOUT ──
+  document.getElementById('whatsappBtn').addEventListener('click', () => {
+    if (!cart.length) return;
+    const lines = cart.map(i => `• ${i.name}${i.size ? ' (Talla ' + i.size + ')' : ''} x${i.qty} = ₲ ${(i.price * i.qty).toLocaleString('es-PY')}`);
+    const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+    const msg = `Hola HERMELI! Quiero hacer un pedido:\n\n${lines.join('\n')}\n\n*Total: ₲ ${total.toLocaleString('es-PY')}*\n\n¿Pueden confirmarme disponibilidad?`;
+    window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`, '_blank');
+  });
+
+  // ── TOAST ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // Init
+  renderCart();
+</script>
+</body>
+</html>
