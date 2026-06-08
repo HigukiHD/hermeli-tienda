@@ -211,6 +211,14 @@
       letter-spacing: 1px; cursor: pointer; transition: background .2s; margin-top: auto;
     }
     .modal-add-btn:hover { background: #333; }
+    .consultar-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 14px; background: #25D366; color: #fff; border: none;
+      border-radius: var(--radius); font-family: 'Inter', sans-serif; font-size: 14px;
+      cursor: pointer; transition: background .2s; margin-top: auto; width: 100%;
+    }
+    .consultar-btn:hover { background: #1ebe5b; }
+    .price-hidden { font-size: 13px; color: var(--muted); font-style: italic; }
     .modal-close {
       position: absolute; top: 12px; right: 16px;
       background: none; border: none; font-size: 24px; cursor: pointer; color: var(--muted);
@@ -317,13 +325,13 @@
     <div class="modal-content">
       <p class="modal-category" id="modalCat"></p>
       <h2 class="modal-name" id="modalName"></h2>
-      <p class="modal-price" id="modalPrice"></p>
+      <div id="modalPriceWrap"></div>
       <p class="modal-desc" id="modalDesc"></p>
       <div id="sizesSection" style="display:none;">
         <p class="sizes-label">Talla</p>
         <div class="sizes-grid" id="sizesGrid"></div>
       </div>
-      <button class="modal-add-btn" id="modalAddBtn">Agregar al carrito</button>
+      <div id="modalActionWrap"></div>
     </div>
     <button class="modal-close" id="modalClose">✕</button>
   </div>
@@ -355,6 +363,7 @@
 
   let app, db;
   let allProducts = [];
+  let globalShowPrice = true;
   let cart = JSON.parse(localStorage.getItem('hermeli_cart') || '[]');
   let currentProduct = null;
   let selectedSize = null;
@@ -366,7 +375,13 @@
     db = getFirestore(app);
     const q = collection(db, 'productos');
     onSnapshot(q, (snap) => {
-      allProducts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // Leer _settings para config de precios
+      const settingsDoc = snap.docs.find(d => d.id === '_settings');
+      if (settingsDoc) globalShowPrice = settingsDoc.data().showPrice !== false;
+      // Solo productos reales
+      allProducts = snap.docs
+        .filter(d => d.id !== '_settings')
+        .map(d => ({ id: d.id, ...d.data() }));
       renderProducts();
       renderFilters();
     });
@@ -398,23 +413,36 @@
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const p = allProducts.find(x => x.id === btn.dataset.id);
-        if (p) addToCart(p, null);
+        if (!p) return;
+        if (priceVisible(p)) addToCart(p, null);
+        else {
+          const msg = `Hola HERMELI! Quisiera consultar el precio de: *${p.name}*`;
+          window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`, '_blank');
+        }
       });
     });
+  }
+
+  function priceVisible(p) {
+    return globalShowPrice && p.showPrice !== false;
   }
 
   function productCard(p) {
     const img = p.image
       ? `<img src="${p.image}" alt="${p.name}" loading="lazy" />`
       : `<div class="placeholder-icon">👗</div>`;
+    const priceHtml = priceVisible(p)
+      ? `<p class="product-price">₲ ${Number(p.price).toLocaleString('es-PY')}</p>
+         <button class="add-btn" data-id="${p.id}">+ Agregar</button>`
+      : `<p class="price-hidden">Consultar precio</p>
+         <button class="add-btn" data-id="${p.id}" style="background:#25D366;">💬 WhatsApp</button>`;
     return `
       <div class="product-card" data-id="${p.id}">
         <div class="product-img">${img}</div>
         <div class="product-info">
           <p class="product-category">${p.category || ''}</p>
           <p class="product-name">${p.name}</p>
-          <p class="product-price">₲ ${Number(p.price).toLocaleString('es-PY')}</p>
-          <button class="add-btn" data-id="${p.id}">+ Agregar</button>
+          ${priceHtml}
         </div>
       </div>`;
   }
@@ -444,12 +472,30 @@
     selectedSize = null;
     document.getElementById('modalCat').textContent = p.category || '';
     document.getElementById('modalName').textContent = p.name;
-    document.getElementById('modalPrice').textContent = `₲ ${Number(p.price).toLocaleString('es-PY')}`;
+    // Precio o consultar
+    const priceWrap = document.getElementById('modalPriceWrap');
+    const actionWrap = document.getElementById('modalActionWrap');
+    if (priceVisible(p)) {
+      priceWrap.innerHTML = `<p class="modal-price">₲ ${Number(p.price).toLocaleString('es-PY')}</p>`;
+      actionWrap.innerHTML = `<button class="modal-add-btn" id="modalAddBtn">Agregar al carrito</button>`;
+      document.getElementById('modalAddBtn').addEventListener('click', () => {
+        if (p.sizes?.length && !selectedSize) { showToast('Por favor seleccioná una talla'); return; }
+        addToCart(p, selectedSize);
+        document.getElementById('modalOverlay').classList.remove('open');
+      });
+    } else {
+      priceWrap.innerHTML = `<p class="price-hidden" style="font-size:16px;">💬 Consultar precio</p>`;
+      const msg = `Hola HERMELI! Quisiera consultar el precio de: *${p.name}*`;
+      actionWrap.innerHTML = `<button class="consultar-btn" onclick="window.open('https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}','_blank')">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+        Consultar por WhatsApp
+      </button>`;
+    }
     document.getElementById('modalDesc').textContent = p.description || '';
     const imgEl = document.getElementById('modalImg');
     imgEl.innerHTML = p.image ? `<img src="${p.image}" alt="${p.name}" />` : `<div style="font-size:60px;">👗</div>`;
     const sizesSection = document.getElementById('sizesSection');
-    if (p.sizes && p.sizes.length) {
+    if (p.sizes && p.sizes.length && priceVisible(p)) {
       sizesSection.style.display = 'block';
       document.getElementById('sizesGrid').innerHTML = p.sizes.map(s =>
         `<div class="size-chip" data-size="${s}">${s}</div>`
@@ -473,13 +519,6 @@
   });
   document.getElementById('modalClose').addEventListener('click', () =>
     document.getElementById('modalOverlay').classList.remove('open'));
-
-  document.getElementById('modalAddBtn').addEventListener('click', () => {
-    if (!currentProduct) return;
-    if (currentProduct.sizes?.length && !selectedSize) { showToast('Por favor seleccioná una talla'); return; }
-    addToCart(currentProduct, selectedSize);
-    document.getElementById('modalOverlay').classList.remove('open');
-  });
 
   // ── CART ──
   function addToCart(product, size) {
